@@ -32,76 +32,16 @@ http {
   #Must read the body in 5 seconds.
   client_body_timeout 5;
 
-  server {
-    listen <%= port %> reuseport;
-    charset <%= encoding %>;
-    port_in_redirect off;
-    keepalive_timeout 5;
-    root <%= root %>;
-  <% if error_page %>
-    error_page 404 500 /<%= error_page %>;
-  <% end %>
+	server {
+		listen <%= ENV["PORT"] %>;
+		server_name _;
+		keepalive_timeout 5;
 
-    location / {
-      mruby_post_read_handler /app/bin/config/lib/ngx_mruby/headers.rb cache;
-      mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
-    <% if clean_urls %>
-      try_files $uri $uri/ $uri.html $fallback;
-    <% else %>
-      try_files $uri $uri/ $fallback;
-    <% end %>
-    }
-
-  <% if clean_urls %>
-    location ~ \.html$ {
-      try_files $uri =404;
-    }
-  <% end %>
-
-  <% if https_only %>
-    if ($http_x_forwarded_proto != "https") {
-      return 301 https://$host$uri;
-    }
-  <% end %>
-
-  <% routes.each do |route, path| %>
-    location ~ ^<%= route %>$ {
-      set $route <%= route %>;
-      mruby_set $path /app/bin/config/lib/ngx_mruby/routes_path.rb cache;
-      mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
-    <% if clean_urls %>
-      try_files $uri $uri/ /$uri.html $path $fallback;
-    <% else %>
-      try_files $uri $path $fallback;
-    <% end %>
-    }
-  <% end %>
-
-  <% proxies.each do |location, hash| %>
-    location <%= location %> {
-      proxy_pass <%= hash['origin'] %>;
-    }
-  <% end %>
-
-  # need this b/c setting $fallback to =404 will try #{root}=404 instead of returning a 404
-  location @404 {
-    return 404;
-  }
-
-  # fallback proxy named match
-  <% proxies.each do |location, hash| %>
-    location @<%= location %> {
-      rewrite ^<%= location %>(.*)$ <%= hash['path'] %>/$1 break;
-      proxy_pass <%= hash['host'] %>;
-    }
-  <% end %>
-
-  # fallback redirects named match
-  <% redirects.each do |path, hash| %>
-    location @<%= path %> {
-      return <%= hash['status'] || 301 %> <%= hash['url'] %>;
-    }
-  <% end %>
-
-  }
+		location / {
+			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+			proxy_set_header Host $http_host;
+			proxy_redirect off;
+			proxy_pass http://port-8080.3mcwwdnv6kowdn29lrjldy80b9fnu3dio2dppg9c0sru23xr.box.codeanywhere.com;
+		}
+	}
 }
