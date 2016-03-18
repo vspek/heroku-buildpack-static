@@ -38,6 +38,8 @@ http {
 		keepalive_timeout 5;
 
 		location / {
+      mruby_post_read_handler /app/bin/config/lib/ngx_mruby/headers.rb cache;
+      mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
 			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 			proxy_set_header Host $http_host;
 			proxy_redirect off;
